@@ -9,6 +9,7 @@ class LineSolver:
         self.jobs = self.init_jobs()
         self.sort_jobs()
         self.jobcount = 0
+        self._stack = []
 
     def get_row(self, index):
         return self.board[index]
@@ -75,14 +76,53 @@ class LineSolver:
             })
         return jobs
 
-    def logic_solve(self, verbose=True):
+    def pick_a_cell(self):
+        for i in range(len(self.board)):
+            for j in range(len(self.board[0])):
+                if self.board[i][j] == 0:
+                    return i, j
+        return None
+
+    def guess_solve(self):
+        result = self.logic_solve(True)
+        if result != 0:  # we should start probing
+            guesses = 0
+            while True:
+                cell = self.pick_a_cell()
+                if not cell:
+                    print "fuck"
+                    print_board(self.board)
+                    return
+                self._stack.append(self.board[:])
+                self.board[cell[0]][cell[1]] = 1
+                self.jobs = []
+                score = self.logic_solve()
+                guesses += 1
+                if not score:
+                    print "contradiction found"
+                    print_board(self.board)
+                    # pop the stack, invert the choice and try again
+                    self.board = self._stack.pop()
+                    self.board[cell[0]][cell[1]] = 2
+                    if guesses > 10:
+                        print "stopping solver at", guesses, "guesses"
+                        return
+                elif score == 0:
+                    print "solved after a guess"
+                    print_board(self.board)
+                    return
+        return
+
+    def logic_solve(self, verbose=False):
         if len(self.jobs) == 0:
-            self.jobcount = 0
+            #self.jobcount = 0
             self.jobs = self.init_jobs()
         while len(self.jobs) > 0:
             job = self.jobs.pop()
             new_line = intersect(job["help"], self.get_line(job))
-            if new_line != job["line"]:
+            if not new_line:
+                return None
+            elif new_line != job["line"]:
                 self.jobcount += 1
                 self.set_line(job, new_line)
                 self.update_jobs(job, new_line)
@@ -90,6 +130,9 @@ class LineSolver:
         if verbose:
             print_board(self.board)
             print "Jobs executed:", self.jobcount
+            print "Solved" if self.empty_cells() == 0 else "Stall"
+
+        return self.empty_cells()
 
     def update_jobs(self, old_job, new_line):
         count = 0
@@ -120,7 +163,6 @@ class LineSolver:
                 if cell == 0:
                     empty -= 1
         return empty
-
 
 
 def left_solve(constraints, line):
@@ -428,8 +470,14 @@ def print_board_alt(board):
 
 
 puzzle_index = 7
-puzzle = read_file()["puzzles"][puzzle_index]
+name = "skiing"
+puzzles = read_file()["puzzles"]
+for p in puzzles:
+    if p["name"] == name:
+        puzzle = p
+#puzzle = read_file()["puzzles"][puzzle_index]
 if puzzle:
     print "Solving", puzzle["name"] if puzzle["name"] else " puzzle"
     solver = LineSolver(puzzle)
-    solver.logic_solve()
+    #solver.logic_solve(True)
+    solver.guess_solve()
