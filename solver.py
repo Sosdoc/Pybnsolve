@@ -12,6 +12,7 @@ class LineSolver:
         self.sort_jobs()
         self.jobcount = 0
         self._stack = []
+        self._guess_stack = []
 
     def get_row(self, index):
         return self.board[index]
@@ -92,9 +93,11 @@ class LineSolver:
             guesses = 0
             while True:
                 cell = self.pick_a_cell()
-                if not cell:
+                if cell is None:
+                    print 'fail in picking'
                     return
                 self._stack.append(copy.deepcopy(self.board))
+                self._guess_stack.append(copy.copy(cell))
                 self.board[cell[0]][cell[1]] = 1
                 self.jobs = []
                 score = self.logic_solve()
@@ -105,7 +108,7 @@ class LineSolver:
                     # pop the stack, invert the choice and try again
                     self.board = self._stack.pop()
                     self.board[cell[0]][cell[1]] = 2
-                    if guesses > 30:
+                    if guesses > 3000:
                         print "stopping solver at", guesses, "guesses"
                         return
                 else:  # no contradiction, let's pick another cell
@@ -113,8 +116,9 @@ class LineSolver:
                         print "solved after", guesses, "guesses"
                         print_board(self.board)
                         return
-                    print "guess again"
-                    print_board(self.board)
+                    #print "no contradiction, try next one"
+                    #print_board(self.board)
+        print 'failure'
         return
 
     def logic_solve(self, verbose=False):
@@ -145,7 +149,7 @@ class LineSolver:
                 found = False
                 for job in self.jobs:
                     if job["type"] != old_job["type"] and job["index"] == i:
-                        line_type = 'cols' if job['type'] == 'row' else 'rows'
+                        line_type = 'cols' if old_job['type'] == 'row' else 'rows'
                         job["score"] = self.line_score(i, line_type)
                         found = True
                         break
