@@ -2,6 +2,8 @@ __author__ = 'Valerio'
 
 import json
 import copy
+from tree import Node
+import timeit
 
 
 class LineSolver:
@@ -12,7 +14,7 @@ class LineSolver:
         self.sort_jobs()
         self.jobcount = 0
         self._stack = []
-        self._guess_stack = []
+        self.guess_count = 0
 
     def get_row(self, index):
         return self.board[index]
@@ -79,48 +81,6 @@ class LineSolver:
             })
         return jobs
 
-    def pick_a_cell(self):
-        for i in range(len(self.board)):
-            for j in range(len(self.board[0])):
-                if self.board[i][j] == 0:
-                    return i, j
-        return None
-
-    def guess_solve(self):
-        result = self.logic_solve(True)
-        # we should start guessing
-        if result != 0:
-            guesses = 0
-            while True:
-                cell = self.pick_a_cell()
-                if cell is None:
-                    print 'fail in picking'
-                    return
-                self._stack.append(copy.deepcopy(self.board))
-                self._guess_stack.append(copy.copy(cell))
-                self.board[cell[0]][cell[1]] = 1
-                self.jobs = []
-                score = self.logic_solve()
-                guesses += 1
-                if score is None:
-                    print "contradiction found"
-                    print_board(self.board)
-                    # pop the stack, invert the choice and try again
-                    self.board = self._stack.pop()
-                    self.board[cell[0]][cell[1]] = 2
-                    if guesses > 3000:
-                        print "stopping solver at", guesses, "guesses"
-                        return
-                else:  # no contradiction, let's pick another cell
-                    if score == 0:
-                        print "solved after", guesses, "guesses"
-                        print_board(self.board)
-                        return
-                    #print "no contradiction, try next one"
-                    #print_board(self.board)
-        print 'failure'
-        return
-
     def logic_solve(self, verbose=False):
         if len(self.jobs) == 0:
             self.jobs = self.init_jobs()
@@ -170,6 +130,55 @@ class LineSolver:
                 if cell != 0:
                     empty -= 1
         return empty
+
+    def cell_score(self, i, j):
+        count = 4
+        if i == 0 or self.board[i-1][j] == 1:
+            count -= 1
+        if i == len(self.puzzle['rows']) - 1 or self.board[i+1][j] == 1:
+            count -= 1
+        if j == 0 or self.board[i][j-1] == 1:
+            count -= 1
+        if j == len(self.puzzle['cols']) - 1 or self.board[i][j+1] == 1:
+            count -= 1
+        return count
+
+    def get_best_cell(self):
+        min_score = 5
+        best_cell = None
+        for i in range(len(self.board)):
+            for j in range(len(self.board[0])):
+                if self.board[i][j] == 0:
+                    score = self.cell_score(i, j)
+                    if score < min_score:
+                        min_score = score
+                        best_cell = (i, j)
+        return best_cell
+
+    def solve(self, node):
+        self.board = node.content
+        result = self.logic_solve()
+        if result is None:
+            return None
+        elif result != 0:
+            cell = self.get_best_cell()
+            node.left = Node(copy.deepcopy(self.board), node)
+            node.left.content[cell[0]][cell[1]] = 1
+            node.right = Node(copy.deepcopy(self.board), node)
+            node.right.content[cell[0]][cell[1]] = 2
+            self.guess_count += 1
+            result_left = self.solve(node.left)
+            if result_left is None:
+                result_right = self.solve(node.right)
+                if result_right is None:
+                    self.board = node.content
+                    return None
+                else:
+                    return result_right
+            else:
+                return result_left
+        else:
+            return self.board
 
 
 def left_solve(constraints, line):
@@ -469,22 +478,23 @@ def print_board(board):
         print s[:-2] + '|'
 
 
-def print_board_alt(board):
-    lens = [max(map(len, str(col))) for col in zip(*board)]
-    fmt = ' '.join('{{:{}}}'.format(x) for x in lens)
-    table = [fmt.format(*row) for row in board]
-    print '\n'.join(table)
-
-
-puzzle_index = 7
-name = "20x20"
+name = "forever"
 puzzles = read_file()["puzzles"]
 for p in puzzles:
     if p["name"] == name:
         puzzle = p
-# puzzle = read_file()["puzzles"][puzzle_index]
+
 if puzzle:
     print "Solving", puzzle["name"] if puzzle["name"] else " puzzle"
     solver = LineSolver(puzzle)
-    #solver.logic_solve(True)
-    solver.guess_solve()
+    root = Node(solver.board)
+    from datetime import datetime
+    start = datetime.now()
+    board = solver.solve(root)
+    stop = datetime.now()
+    diff = stop - start
+    print_board(board)
+    print "with", solver.guess_count, "guesses"
+    print "in %ss %sms" % (diff.seconds, diff.microseconds/1000)
+
+
