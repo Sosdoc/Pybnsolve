@@ -3,7 +3,6 @@ __author__ = 'Valerio'
 import json
 import copy
 from tree import Node
-import timeit
 
 
 class LineSolver:
@@ -478,7 +477,7 @@ def print_board(board):
         print s[:-2] + '|'
 
 
-name = "forever"
+name = "heart"
 puzzles = read_file()["puzzles"]
 for p in puzzles:
     if p["name"] == name:
