@@ -2,7 +2,7 @@ __author__ = 'Valerio'
 
 import json
 import copy
-from tree import Node
+import tree
 
 
 class LineSolver:
@@ -123,11 +123,9 @@ class LineSolver:
                     })
 
     def empty_cells(self):
-        empty = len(self.board) * len(self.board[0])
+        empty = 0
         for line in self.board:
-            for cell in line:
-                if cell != 0:
-                    empty -= 1
+            empty += line.count(0)
         return empty
 
     def cell_score(self, i, j):
@@ -161,9 +159,9 @@ class LineSolver:
             return None
         elif result != 0:
             cell = self.get_best_cell()
-            node.left = Node(copy.deepcopy(self.board), node)
+            node.left = tree.Node(copy.deepcopy(self.board), node)
             node.left.content[cell[0]][cell[1]] = 1
-            node.right = Node(copy.deepcopy(self.board), node)
+            node.right = tree.Node(copy.deepcopy(self.board), node)
             node.right.content[cell[0]][cell[1]] = 2
             self.guess_count += 1
             result_left = self.solve(node.left)
@@ -463,21 +461,22 @@ def intersect(constraints, line):
 
 
 def read_file():
-    in_file = open("nonogram.txt", "r")
-    puzzles = json.load(in_file)
-    in_file.close()
-    return puzzles
+    with open('nonogram.txt') as f:
+        res = json.load(f)
+    return res
 
 
-def print_board(board):
-    for line in board:
-        s = '|'
+def print_board(b):
+    for line in b:
+        s = ['|']
         for cell in line:
-            s += '#, ' if cell == 1 else '-, ' if cell == 2 else ' , '
-        print s[:-2] + '|'
+            s.append(' # ' if cell == 1 else ' - ' if cell == 2 else '  ')
+        s.pop()
+        s.append('|')
+        print "".join(s)
 
 
-name = "heart"
+name = "edge"
 puzzles = read_file()["puzzles"]
 for p in puzzles:
     if p["name"] == name:
@@ -486,7 +485,7 @@ for p in puzzles:
 if puzzle:
     print "Solving", puzzle["name"] if puzzle["name"] else " puzzle"
     solver = LineSolver(puzzle)
-    root = Node(solver.board)
+    root = tree.Node(solver.board)
     from datetime import datetime
     start = datetime.now()
     board = solver.solve(root)
