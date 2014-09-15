@@ -6,7 +6,7 @@ import tree
 import argparse
 
 
-class LineSolver:
+class Solver:
     def __init__(self, puzzle):
         self.puzzle = puzzle
         self.board = [[0 for y in range(len(puzzle['cols']))] for x in range(len(puzzle['rows']))]
@@ -186,24 +186,24 @@ def left_solve(constraints, line):
     b = 0
     backtracking = False
 
-    state = 0
+    state = 'newblock'
 
-    while state != 6:
+    while state != 'halt':
         continue_loop = False
 
-        if state == 0:
+        if state == 'newblock':
             if b >= len(constraints):
                 if b == 0:
                     j = 0
                 b -= 1
-                state = 3
+                state = 'checkrest'
                 continue
             pos[b] = 0 if b == 0 else j + 1
             if pos[b] == len(line):
                 return None
-            state = 1
+            state = 'placeblock'
 
-        elif state == 1:
+        elif state == 'placeblock':
             while line[pos[b]] == 2:
                 pos[b] += 1
                 if pos[b] >= len(line):
@@ -217,11 +217,11 @@ def left_solve(constraints, line):
                 if line[j] == 2:
                     if cov[b] == -1:
                         pos[b] = j
-                        state = 1
+                        state = 'placeblock'
                         continue_loop = True
                         break
                     else:
-                        state = 4
+                        state = 'backtrack'
                         continue_loop = True
                         break
                 if cov[b] == -1 and line[j] == 1:
@@ -229,13 +229,13 @@ def left_solve(constraints, line):
                 j += 1
             if continue_loop:
                 continue
-            state = 2
+            state = 'finalspace'
 
-        elif state == 2:
+        elif state == 'finalspace':
             if j < len(line):
                 while j < len(line) and line[j] == 1:
                     if cov[b] == pos[b]:
-                        state = 4
+                        state = 'backtrack'
                         continue_loop = True
                         break
                     pos[b] += 1
@@ -246,45 +246,45 @@ def left_solve(constraints, line):
                     continue
             if backtracking and cov[b] == -1:
                 backtracking = False
-                state = 5
+                state = 'advanceblock'
                 continue
             if j >= len(line) and b < len(constraints) - 1:
                 return None
             b += 1
             backtracking = False
-            state = 0
+            state = 'newblock'
 
-        elif state == 3:
+        elif state == 'checkrest':
             if j < len(line):
                 while j < len(line):
                     if line[j] == 1:
                         j = pos[b] + constraints[b]
-                        state = 5
+                        state = 'advanceblock'
                         continue_loop = True
                         break
                     j += 1
                 if continue_loop:
                     continue
-            state = 6
+            state = 'halt'
 
-        elif state == 4:
+        elif state == 'backtrack':
             b -= 1
             if b < 0:
                 return None
             j = pos[b] + constraints[b]
-            state = 5
+            state = 'advanceblock'
 
-        elif state == 5:
+        elif state == 'advanceblock':
             while cov[b] < 0 or pos[b] < cov[b]:
                 if line[j] == 2:
                     if cov[b] > 0:
-                        state = 4
+                        state = 'backtrack'
                         continue_loop = True
                         break
                     else:
                         pos[b] = j + 1
                         backtracking = True
-                        state = 1
+                        state = 'placeblock'
                         continue_loop = True
                         break
                 pos[b] += 1
@@ -292,7 +292,7 @@ def left_solve(constraints, line):
                     j += 1
                     if cov[b] == -1:
                         cov[b] = j - 1
-                    state = 2
+                    state = 'finalspace'
                     continue_loop = True
                     break
                 j += 1
@@ -300,7 +300,7 @@ def left_solve(constraints, line):
                     return None
             if continue_loop:
                 continue
-            state = 4
+            state = 'backtrack'
     return pos
 
 
@@ -310,25 +310,25 @@ def right_solve(constraints, line):
     cov = [0 for cell in range(len(constraints))]
     b = len(constraints) - 1
     backtracking = False
-    state = 0
+    state = 'newblock'
     maxblock = len(constraints) - 1
 
-    while state != 6:
+    while state != 'halt':
         continue_loop = False
 
-        if state == 0:
+        if state == 'newblock':
             if b < 0:
                 if b == maxblock:
                     j = len(line) - 1
                 b += 1
-                state = 3
+                state = 'checkrest'
                 continue
             pos[b] = len(line) - 1 if b == maxblock else j - 1
             if pos[b] - constraints[b] + 1 < 0:
                 return None
-            state = 1
+            state = 'placeblock'
 
-        elif state == 1:
+        elif state == 'placeblock':
             while line[pos[b]] == 2:
                 pos[b] -= 1
                 if pos[b] < 0:
@@ -342,11 +342,11 @@ def right_solve(constraints, line):
                 if line[j] == 2:
                     if cov[b] == -1:
                         pos[b] = j
-                        state = 1
+                        state = 'placeblock'
                         continue_loop = True
                         break
                     else:
-                        state = 4
+                        state = 'backtrack'
                         continue_loop = True
                         break
                 if cov[b] == -1 and line[j] == 1:
@@ -354,13 +354,13 @@ def right_solve(constraints, line):
                 j -= 1
             if continue_loop:
                 continue
-            state = 2
+            state = 'finalspace'
 
-        elif state == 2:
+        elif state == 'finalspace':
             if j >= 0:
                 while j >= 0 and line[j] == 1:
                     if cov[b] == pos[b]:
-                        state = 4
+                        state = 'backtrack'
                         continue_loop = True
                         break
                     pos[b] -= 1
@@ -371,45 +371,45 @@ def right_solve(constraints, line):
                     continue
             if backtracking and cov[b] == -1:
                 backtracking = False
-                state = 5
+                state = 'advanceblock'
                 continue
             if j < 0 < b:
                 return None
             b -= 1
             backtracking = False
-            state = 0
+            state = 'newblock'
 
-        elif state == 3:
+        elif state == 'checkrest':
             if j >= 0:
                 while j >= 0:
                     if line[j] == 1:
                         j = pos[b] - constraints[b]
-                        state = 5
+                        state = 'advanceblock'
                         continue_loop = True
                         break
                     j -= 1
                 if continue_loop:
                     continue
-            state = 6
+            state = 'halt'
 
-        elif state == 4:
+        elif state == 'backtrack':
             b += 1
             if b > maxblock:
                 return None
             j = pos[b] - constraints[b]
-            state = 5
+            state = 'advanceblock'
 
-        elif state == 5:
+        elif state == 'advanceblock':
             while cov[b] < 0 or pos[b] > cov[b]:
                 if line[j] == 2:
                     if cov[b] > 0:
-                        state = 4
+                        state = 'backtrack'
                         continue_loop = True
                         break
                     else:
                         pos[b] = j - 1
                         backtracking = True
-                        state = 1
+                        state = 'placeblock'
                         continue_loop = True
                         break
                 pos[b] -= 1
@@ -417,7 +417,7 @@ def right_solve(constraints, line):
                     j -= 1
                     if cov[b] == -1:
                         cov[b] = j + 1
-                    state = 2
+                    state = 'finalspace'
                     continue_loop = True
                     break
                 j -= 1
@@ -425,7 +425,7 @@ def right_solve(constraints, line):
                     return None
             if continue_loop:
                 continue
-            state = 4
+            state = 'backtrack'
     return pos
 
 
@@ -490,7 +490,7 @@ if __name__ == "__main__":
 
     if puzzle:
         print "Solving", puzzle["name"] if puzzle["name"] else " puzzle"
-        solver = LineSolver(puzzle)
+        solver = Solver(puzzle)
         root = tree.Node(solver.board)
         from datetime import datetime
         start = datetime.now()
