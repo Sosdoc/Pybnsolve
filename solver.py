@@ -3,6 +3,7 @@ __author__ = 'Valerio'
 import json
 import copy
 import tree
+import argparse
 
 
 class LineSolver:
@@ -460,8 +461,8 @@ def intersect(constraints, line):
     return new_line
 
 
-def read_file():
-    with open('nonogram.txt') as f:
+def read_file(filename):
+    with open(filename) as f:
         res = json.load(f)
     return res
 
@@ -476,23 +477,28 @@ def print_board(b):
         print "".join(s)
 
 
-name = "edge"
-puzzles = read_file()["puzzles"]
-for p in puzzles:
-    if p["name"] == name:
-        puzzle = p
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("name", nargs="?", default="edge", help="name of the puzzle to solve (looked up in the file)")
+    parser.add_argument("--file", nargs="?", default="nonogram.txt", help="filename containing the puzzles")
+    args = parser.parse_args()
 
-if puzzle:
-    print "Solving", puzzle["name"] if puzzle["name"] else " puzzle"
-    solver = LineSolver(puzzle)
-    root = tree.Node(solver.board)
-    from datetime import datetime
-    start = datetime.now()
-    board = solver.solve(root)
-    stop = datetime.now()
-    diff = stop - start
-    print_board(board)
-    print "with", solver.guess_count, "guesses"
-    print "in %ss %sms" % (diff.seconds, diff.microseconds/1000)
+    puzzles = read_file(args.file)["puzzles"]
+    for p in puzzles:
+        if p["name"] == args.name:
+            puzzle = p
+
+    if puzzle:
+        print "Solving", puzzle["name"] if puzzle["name"] else " puzzle"
+        solver = LineSolver(puzzle)
+        root = tree.Node(solver.board)
+        from datetime import datetime
+        start = datetime.now()
+        board = solver.solve(root)
+        stop = datetime.now()
+        diff = stop - start
+        print_board(board)
+        print "with", solver.guess_count, "guesses"
+        print "in %ss %sms" % (diff.seconds, diff.microseconds/1000)
 
 
