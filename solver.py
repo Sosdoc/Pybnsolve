@@ -180,12 +180,11 @@ class Solver:
 
 
 def left_solve(constraints, line):
-    j = 0
     pos = [0 for cell in range(len(constraints))]
     cov = [0 for cell in range(len(constraints))]
-    b = 0
+    j = 0  # cell index
+    b = 0  # the current block being positioned
     backtracking = False
-
     state = 'newblock'
 
     while state != 'halt':
@@ -478,18 +477,30 @@ def print_board(b):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description='A simple nonogram solver.')
     parser.add_argument("name", nargs="?", default="edge", help="name of the puzzle to solve (looked up in the file)")
-    parser.add_argument("--file", nargs="?", default="nonogram.txt", help="filename containing the puzzles")
+    parser.add_argument("-f", "--file", nargs="?", default="nonogram.txt", help="filename containing the puzzles")
+    parser.add_argument("-l", "--list", action="store_true", help="list the puzzle names contained in the file")
     args = parser.parse_args()
 
-    puzzles = read_file(args.file)["puzzles"]
+    try:
+        puzzles = read_file(args.file)["puzzles"]
+    except IOError as e:
+        print e
+        exit()
+
     for p in puzzles:
         if p["name"] == args.name:
             puzzle = p
 
+    if args.list:
+        print "List of puzzles: "
+        for p in puzzles:
+            print p['name']
+        exit()
+
     if puzzle:
-        print "Solving", puzzle["name"] if puzzle["name"] else " puzzle"
+        print "Solving", puzzle["name"] if puzzle["name"] else "puzzle"
         solver = Solver(puzzle)
         root = tree.Node(solver.board)
         from datetime import datetime
